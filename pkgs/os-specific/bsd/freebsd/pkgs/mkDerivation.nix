@@ -59,6 +59,7 @@ lib.makeOverridable (
       makeFlags =
         [
           "STRIP=-s" # flag to install, not command
+          "MK_AUTO_OBJ=no"
         ]
         ++ lib.optional (!stdenv'.hostPlatform.isFreeBSD) "MK_WERROR=no"
         ++ lib.optional stdenv.hostPlatform.isStatic "SHLIB_NAME=";
