@@ -343,16 +343,12 @@ stdenvNoCC.mkDerivation {
       done
     ''
 
-    + optionalString targetPlatform.isDarwin ''
-      echo "-arch ${targetPlatform.darwinArch}" >> $out/nix-support/libc-ldflags
-    ''
-
     ##
     ## GNU specific extra strip flags
     ##
 
     # TODO(@sternenseemann): make a generic strip wrapper?
-    + optionalString (bintools.isGNU or false || bintools.isCCTools or false) ''
+    + optionalString (bintools.isGNU or false || bintools.isLLVM or false || bintools.isCCTools or false) ''
       wrap ${targetPrefix}strip ${./gnu-binutils-strip-wrapper.sh} \
         "${bintools_bin}/bin/${targetPrefix}strip"
     ''

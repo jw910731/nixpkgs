@@ -11,20 +11,21 @@
   openssl,
   lttng-ust_2_12,
   krb5,
-  imagemagick,
   makeDesktopItem,
   copyDesktopItems,
   bash,
+  xorg,
+  xdg-utils,
 }:
 buildDotnetModule rec {
   pname = "v2rayn";
-  version = "7.3.2";
+  version = "7.7.0";
 
   src = fetchFromGitHub {
     owner = "2dust";
     repo = "v2rayN";
     tag = version;
-    hash = "sha256-mWfWpleUVbq6Z31oh6QoG0j9eT3d7yF6z7e4lRe6+cM=";
+    hash = "sha256-gnGZtHSmmyxTf+/Dp1cEXI1odI8SiFLzATd9PNnAC7E=";
   };
 
   projectFile = "v2rayN/v2rayN.Desktop/v2rayN.Desktop.csproj";
@@ -32,17 +33,15 @@ buildDotnetModule rec {
   nugetDeps = ./deps.json;
 
   postPatch = ''
-    substituteInPlace v2rayN/AmazTool/UpgradeApp.cs \
-      --replace-fail "return AppDomain.CurrentDomain.BaseDirectory;" 'return Path.Combine(Environment.GetEnvironmentVariable("XDG_DATA_HOME") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share"), "v2rayn");'
-    substituteInPlace v2rayN/ServiceLib/Common/Utils.cs \
-      --replace-fail "return AppDomain.CurrentDomain.BaseDirectory;" 'return Path.Combine(Environment.GetEnvironmentVariable("XDG_DATA_HOME") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share"), "v2rayn");'
     substituteInPlace v2rayN/ServiceLib/Common/Utils.cs \
       --replace-fail "/bin/bash" "${bash}/bin/bash"
-    substituteInPlace v2rayN/ServiceLib/ServiceLib.csproj \
-      --replace-fail "0.16.20" "0.16.14"
+    substituteInPlace v2rayN/ServiceLib/Handler/AutoStartupHandler.cs \
+      --replace-fail "Utils.GetExePath())" '"${placeholder "out"}/bin/v2rayN")'
+    substituteInPlace v2rayN/ServiceLib/ViewModels/MainWindowViewModel.cs \
+      --replace-fail "nautilus" "${xdg-utils}/bin/xdg-open"
   '';
 
-  dotnetInstallFlags = [ "-p:PublishReadyToRun=false" ];
+  dotnetBuildFlags = [ "-p:PublishReadyToRun=false" ];
 
   dotnet-sdk = dotnetCorePackages.sdk_8_0;
 
@@ -51,7 +50,6 @@ buildDotnetModule rec {
   executables = [ "v2rayN" ];
 
   nativeBuildInputs = [
-    imagemagick
     copyDesktopItems
     autoPatchelfHook
   ];
@@ -66,23 +64,15 @@ buildDotnetModule rec {
     (lib.getLib stdenv.cc.cc)
   ];
 
-  postBuild =
-    let
-      selectSystem =
-        attrs:
-        attrs.${stdenv.hostPlatform.system}
-          or (throw "v2rayn: ${stdenv.hostPlatform.system} is not supported");
-      arch = selectSystem {
-        x86_64-linux = "x64";
-        aarch64-linux = "arm64";
-      };
-    in
-    ''
-      mv ./v2rayN/v2rayN.Desktop/bin/Release/net8.0/linux-${arch} ./v2rayN/v2rayN.Desktop/bin/Release/v2rayn
-      rm -r ./v2rayN/v2rayN.Desktop/bin/Release/net8.0
-      mv ./v2rayN/v2rayN.Desktop/bin/Release/v2rayn ./v2rayN/v2rayN.Desktop/bin/Release/net8.0
-      ln -s . ./v2rayN/v2rayN.Desktop/bin/Release/net8.0/linux-${arch}
-    '';
+  runtimeDeps = [
+    xorg.libX11
+    xorg.libXrandr
+    xorg.libXi
+    xorg.libICE
+    xorg.libSM
+    xorg.libXcursor
+    xorg.libXext
+  ];
 
   desktopItems = [
     (makeDesktopItem {
@@ -91,13 +81,20 @@ buildDotnetModule rec {
       icon = "v2rayn";
       genericName = "v2rayN";
       desktopName = "v2rayN";
+      categories = [
+        "Network"
+        "Application"
+      ];
+      terminal = false;
+      comment = "A GUI client for Windows and Linux, support Xray core and sing-box-core and others";
     })
   ];
 
   postInstall = ''
-    mkdir -p $out/share/pixmaps
-    magick "v2rayN/v2rayN.Desktop/Assets/v2rayN.ico[11]" $out/share/pixmaps/v2rayn.png
+    install -Dm644 v2rayN/v2rayN.Desktop/v2rayN.png $out/share/pixmaps/v2rayn.png
   '';
+
+  passthru.updateScript = ./update.sh;
 
   meta = {
     description = "GUI client for Windows and Linux, support Xray core and sing-box-core and others";

@@ -14,6 +14,7 @@
   xorgproto,
   libXext,
   libXcursor,
+  libXfixes,
   libXmu,
   libIDL,
   SDL2,
@@ -37,7 +38,7 @@
   libvpx,
   nettools,
   dbus,
-  substituteAll,
+  replaceVars,
   gsoap,
   zlib,
   xz,
@@ -76,8 +77,8 @@ let
   virtualboxVersion = "7.1.4";
   virtualboxSha256 = "872e7a42b41f8558abbf887f1bdc7aac932bb88b2764d07cbce270cab57e3b5e";
 
-  kvmPatchVersion = "20240828";
-  kvmPatchHash = "sha256-g0esJbB1IGyLGZMLFJIY8ZYdHWuiM5IZtLMHZvCY6bs=";
+  kvmPatchVersion = "20241220";
+  kvmPatchHash = "sha256-SYyD79iN6Sp/Mxat+ml3fee9X1vFUFyrwHPnQNboc1c=";
 
   # The KVM build is not compatible to VirtualBox's kernel modules. So don't export
   # modsrc at all.
@@ -204,6 +205,9 @@ stdenv.mkDerivation (finalAttrs: {
     grep 'libdbus-1\.so\.3'     src include -rI --files-with-match | xargs sed -i -e '
       s@"libdbus-1\.so\.3"@"${dbus.lib}/lib/libdbus-1.so.3"@g'
 
+    grep 'libXfixes\.so\.3'     src include -rI --files-with-match | xargs sed -i -e '
+      s@"libXfixes\.so\.3"@"${libXfixes.out}/lib/libXfixes.so.3"@g'
+
     grep 'libasound\.so\.2'     src include -rI --files-with-match | xargs sed -i -e '
       s@"libasound\.so\.2"@"${alsa-lib.out}/lib/libasound.so.2"@g'
 
@@ -231,10 +235,11 @@ stdenv.mkDerivation (finalAttrs: {
     # these issues by patching the code to set QT_PLUGIN_PATH to the necessary paths,
     # after the code that unsets it. Note that qtsvg is included so that SVG icons from
     # the user's icon theme can be loaded.
-    ++ optional (!headless && enableHardening) (substituteAll {
-      src = ./qt-env-vars.patch;
-      qtPluginPath = "${qtbase}/bin/${qtbase.qtPluginPrefix}:${qtsvg}/bin/${qtbase.qtPluginPrefix}:${qtwayland}/bin/${qtbase.qtPluginPrefix}";
-    })
+    ++ optional (!headless && enableHardening) (
+      replaceVars ./qt-env-vars.patch {
+        qtPluginPath = "${qtbase}/bin/${qtbase.qtPluginPrefix}:${qtsvg}/bin/${qtbase.qtPluginPrefix}:${qtwayland}/bin/${qtbase.qtPluginPrefix}";
+      }
+    )
     # While the KVM patch should not break any other behavior if --with-kvm is not specified,
     # we don't take any chances and only apply it if people actually want to use KVM support.
     ++ optional enableKvm (

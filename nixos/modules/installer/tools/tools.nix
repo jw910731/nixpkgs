@@ -43,7 +43,7 @@ let
     manPage = ./manpages/nixos-version.8;
   };
 
-  nixos-install = pkgs.nixos-install.override { nix = config.nix.package; };
+  nixos-install = pkgs.nixos-install.override { };
   nixos-rebuild = pkgs.nixos-rebuild.override { nix = config.nix.package; };
   nixos-rebuild-ng = pkgs.nixos-rebuild-ng.override {
     nix = config.nix.package;
@@ -96,7 +96,7 @@ let
       # services.printing.enable = true;
 
       # Enable sound.
-      # hardware.pulseaudio.enable = true;
+      # services.pulseaudio.enable = true;
       # OR
       # services.pipewire = {
       #   enable = true;

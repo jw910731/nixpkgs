@@ -7,24 +7,23 @@
   python3,
   makeWrapper,
   writeScriptBin,
-  which,
-  nix-update-script,
   versionCheckHook,
+  nix-update-script,
 }:
 
 rustPlatform.buildRustPackage rec {
   pname = "pylyzer";
-  version = "0.0.74";
+  version = "0.0.77";
 
   src = fetchFromGitHub {
     owner = "mtshiba";
     repo = "pylyzer";
     tag = "v${version}";
-    hash = "sha256-NVCFwISPRTNgs4hn9ezp2Xb4r7xytziIByVSKyqt/lo=";
+    hash = "sha256-MlDW3dNe9fdOzWp38VkjgoiqOYgBF+ezwTQE0+6SXCc=";
   };
 
   useFetchCargoVendor = true;
-  cargoHash = "sha256-mNFRP6mT4mKKKg05nJcdd8qy6YFxWVADHIU9uGrEcng=";
+  cargoHash = "sha256-bkYRPwiB2BN4WNZ0HcOBiDbFyidftbHWyIDvJasnePc=";
 
   nativeBuildInputs = [
     git
@@ -45,20 +44,6 @@ rustPlatform.buildRustPackage rec {
     cp -r $HOME/.erg/ $out/lib/erg
   '';
 
-  nativeCheckInputs = [ which ];
-
-  checkFlags =
-    [
-      # this test causes stack overflow
-      # > thread 'exec_import' has overflowed its stack
-      "--skip=exec_import"
-    ]
-    ++ lib.optionals (stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isx86_64) [
-      # Dict({Str..Obj: Int}) does not implement Iterable(Str..Obj..Obj) and Indexable({"a"}..Obj, Int)
-      # https://github.com/mtshiba/pylyzer/issues/114
-      "--skip=exec_casting"
-    ];
-
   postFixup = ''
     wrapProgram $out/bin/pylyzer --set ERG_PATH $out/lib/erg
   '';
@@ -76,7 +61,7 @@ rustPlatform.buildRustPackage rec {
   meta = {
     description = "Fast static code analyzer & language server for Python";
     homepage = "https://github.com/mtshiba/pylyzer";
-    changelog = "https://github.com/mtshiba/pylyzer/releases/tag/${src.tag}";
+    changelog = "https://github.com/mtshiba/pylyzer/releases/tag/v${version}";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ natsukium ];
     mainProgram = "pylyzer";
